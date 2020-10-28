@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "pt.nunogneto";
+option java_outer_classname = "TrabalhoProto";
+option objc_class_prefix = "HLW";
+
+package trabalho;
+
+service Broker {
+
+  rpc getTagList (TagRequest) returns (stream Tag) {}
+
+  rpc subscribeToTag (TagSubscription) returns (stream TagMessage) {}
+
+  rpc subscribeToTags (stream TagSubscription) returns (stream TagMessage) {}
+
+  rpc registerAsProvider (ProviderRegistration) returns (ProviderRegisterResult) {}
+
+  rpc publishMessageIndividual(MessageToPublish) returns (PublishResult) {}
+
+  rpc publishMessage (stream MessageToPublish) returns (stream PublishResult) {}
+}
+
+message TagRequest {}
+
+message Tag {
+
+  string tagName = 1;
+
+}
+
+message TagSubscription {
+
+  string tagName = 1;
+
+}
+
+message TagMessage {
+
+  string originatingTag = 1;
+
+  string message = 2;
+
+  uint64 tagID = 3;
+
+  uint64 date = 4;
+
+}
+
+message ProviderRegistration {
+
+  string tagProvider = 1;
+
+}
+
+message ProviderRegisterResult {}
+
+message MessageToPublish {
+
+  string tag = 1;
+
+  string message = 2;
+
+  int64 date = 3;
+
+  int64 id = 4;
+
+}
+
+message PublishResult {
+  uint32 result = 1;
+}
