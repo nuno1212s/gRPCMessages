@@ -42,21 +42,19 @@ public class PublisherClient extends Client {
     }
 
     public static int getPoisson(double lambda) {
-        double L = Math.exp(-lambda);
-        double p = 1.0;
-        int k = 0;
 
-        do {
-            k++;
-            p *= Math.random();
-        } while (p > L);
+        double logResult = - (Math.log(1 - Math.random())), divided = logResult / lambda;
 
-        return k - 1;
+//        logger.log(Level.INFO, "The log value is {0} and divided is {1}",
+//                new Object[]{logResult, divided});
+
+        return (int) Math.ceil(divided);
     }
 
     private void generateMessages() {
-        //* 1000f to adjust to milliseconds
-        float averageTimeBetween = (TIME_FRAME / AVERAGE_MESSAGES_DESIRED) * 1000f;
+        float averageTimeBetween = (TIME_FRAME / AVERAGE_MESSAGES_DESIRED);
+
+//        logger.log(Level.INFO, "Time between {0}, lambda would be {1}", new Object[]{averageTimeBetween, 1 / averageTimeBetween});
 
         while (true) {
 
@@ -66,7 +64,9 @@ public class PublisherClient extends Client {
 
             publishMessage(getTag(), getRandomMessages().get(random.nextInt(getRandomMessages().size())));
 
-            int toSleep = getPoisson(averageTimeBetween);
+            int toSleep = getPoisson(1 / averageTimeBetween) * 1000;
+
+            logger.log(Level.INFO, "Sleeping for {0} ms", toSleep);
 
             try {
                 Thread.sleep(toSleep);
@@ -78,6 +78,10 @@ public class PublisherClient extends Client {
 
     private void deactivate() {
         active.set(false);
+
+        if (this.publishStream != null) {
+            this.publishStream.onCompleted();
+        }
     }
 
     private StreamObserver<MessageToPublish> initStream() {
@@ -99,7 +103,7 @@ public class PublisherClient extends Client {
 
             @Override
             public void onCompleted() {
-
+                logger.log(Level.SEVERE, "The broker server has been disconnected.");
             }
         };
 

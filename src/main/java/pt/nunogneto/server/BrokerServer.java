@@ -15,9 +15,13 @@ public class BrokerServer {
 
     private Server server;
 
+    private BrokerServerImpl implementation;
+
     public void start() throws IOException {
+        implementation = new BrokerServerImpl(logger);
+
         server = ServerBuilder.forPort(PORT)
-                .addService(new BrokerServerImpl(logger))
+                .addService(implementation)
                 .build().start();
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -37,6 +41,8 @@ public class BrokerServer {
 
     private void stop() throws InterruptedException {
         if (server != null) {
+            implementation.shutdown();
+
             server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
         }
     }

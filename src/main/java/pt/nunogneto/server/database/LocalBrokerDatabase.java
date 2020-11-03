@@ -6,8 +6,12 @@ import pt.nunogneto.TagMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public abstract class LocalBrokerDatabase implements BrokerDatabase {
+
+    protected static final Logger logger = Logger.getLogger(BrokerDatabase.class.getName());
 
     protected final Map<String, Collection<StreamObserver<MessageToPublish>>> publishers = new ConcurrentHashMap<>();
 
@@ -51,9 +55,10 @@ public abstract class LocalBrokerDatabase implements BrokerDatabase {
 
             if (tag.getValue().remove(publisher)) {
                 if (tag.getValue().isEmpty()) {
-
                     publishers.remove(tag.getKey());
                 }
+
+                break;
             }
         }
     }
@@ -69,7 +74,49 @@ public abstract class LocalBrokerDatabase implements BrokerDatabase {
                 .setOriginatingTag(toPublish.getTag())
                 .setMessage(toPublish.getMessage()).build();
 
-        streamObservers.forEach(stream -> stream.onNext(build));
+        final Iterator<StreamObserver<TagMessage>> iterator = streamObservers.iterator();
+
+        while (iterator.hasNext()) {
+
+            final StreamObserver<TagMessage> stream = iterator.next();
+
+            try {
+                stream.onNext(build);
+            } catch (Exception e) {
+                logger.log(Level.WARNING, "Client for tag {0} has disconnected", toPublish.getTag());
+
+                iterator.remove();
+            }
+        }
     }
 
+    @Override
+    public void shutdown() {
+        publishers.forEach((tag, publisherStreams) -> {
+
+            logger.log(Level.WARNING, "Disconnecting publishers for tag {0}", tag);
+
+            try {
+                for (StreamObserver<MessageToPublish> publisherStream : publisherStreams) {
+                    publisherStream.onCompleted();
+                }
+            } catch (Exception ignored) {
+
+            }
+
+        });
+
+        subscribers.forEach((tag, subscriberStreams) -> {
+
+            try {
+                logger.log(Level.WARNING, "Disconnecting subscribers for tag {0}", tag);
+
+                for (StreamObserver<TagMessage> subscriberStream : subscriberStreams) {
+                    subscriberStream.onCompleted();
+                }
+            } catch (Exception ignored) {
+
+            }
+        });
+    }
 }

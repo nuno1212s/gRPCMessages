@@ -22,4 +22,6 @@ public interface BrokerDatabase {
 
     void publishMessage(MessageToPublish toPublish);
 
+    void shutdown();
+
 }

@@ -226,7 +226,7 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
 
         @Override
         public int compareTo(PublishedMessage publishedMessage) {
-            return Long.compare(publishedDate, publishedMessage.getPublishedDate());
+            return -Long.compare(publishedDate, publishedMessage.getPublishedDate());
         }
     }
 }

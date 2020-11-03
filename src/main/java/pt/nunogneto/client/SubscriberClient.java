@@ -42,9 +42,7 @@ public class SubscriberClient extends Client {
 
             final TagMessage next = tagMessageIterator.next();
 
-            logger.log(Level.INFO, "Received a message for the tag " + tag + ":");
-
-            logger.log(Level.INFO, next.getMessage());
+            logger.log(Level.INFO, "Received a message for the tag {0}: {1}", new Object[]{tag, next.getMessage()});
         }
     }
 

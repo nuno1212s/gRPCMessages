@@ -1,7 +1,6 @@
 package pt.nunogneto.util;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class SomeSentencesParser implements DataParser {
 
@@ -23,7 +22,7 @@ public class SomeSentencesParser implements DataParser {
                 "The skeleton had skeletons of his own in the closet.");
 
         tags.add("trial");
-        tags.add("license");
+//        tags.add("license");
         //tags.add("support");
         //tags.add("bug");
     }

@@ -102,7 +102,7 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
     @Override
     public StreamObserver<MessageToPublish> publishMessage(StreamObserver<PublishResult> responseObserver) {
 
-        StreamObserver<MessageToPublish> observer = new StreamObserver<MessageToPublish>() {
+        return new StreamObserver<MessageToPublish>() {
 
             private boolean registered = false;
 
@@ -125,7 +125,9 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
 
             @Override
             public void onError(Throwable t) {
+                logger.log(Level.WARNING, "Publisher client has disconnected. {0}", t.getMessage());
 
+                database.removePublisher(this);
             }
 
             @Override
@@ -133,10 +135,16 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
 
                 logger.log(Level.INFO, "Publisher disconnected.");
 
-                responseObserver.onCompleted();
+                try {
+                    responseObserver.onCompleted();
+                } catch (Exception ignored) {
+
+                }
             }
         };
+    }
 
-        return observer;
+    public void shutdown() {
+        this.database.shutdown();
     }
 }
