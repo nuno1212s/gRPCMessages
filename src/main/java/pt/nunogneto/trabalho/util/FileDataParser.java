@@ -1,4 +1,4 @@
-package pt.nunogneto.util;
+package pt.nunogneto.trabalho.util;
 
 import java.io.*;
 import java.util.ArrayList;

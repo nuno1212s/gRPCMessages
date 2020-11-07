@@ -1,11 +1,10 @@
-package pt.nunogneto.server.database;
+package pt.nunogneto.trabalho.server.database;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import io.grpc.stub.StreamObserver;
-import org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS;
-import pt.nunogneto.MessageToPublish;
-import pt.nunogneto.TagMessage;
+import pt.nunogneto.trabalho.MessageToPublish;
+import pt.nunogneto.trabalho.TagMessage;
 
 import java.io.File;
 import java.io.FileReader;

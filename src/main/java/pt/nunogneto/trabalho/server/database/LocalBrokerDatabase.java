@@ -1,8 +1,9 @@
-package pt.nunogneto.server.database;
+package pt.nunogneto.trabalho.server.database;
 
+import com.google.common.collect.ImmutableMap;
 import io.grpc.stub.StreamObserver;
-import pt.nunogneto.MessageToPublish;
-import pt.nunogneto.TagMessage;
+import pt.nunogneto.trabalho.MessageToPublish;
+import pt.nunogneto.trabalho.TagMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +21,16 @@ public abstract class LocalBrokerDatabase implements BrokerDatabase {
     @Override
     public List<String> getTagList() {
         return new ArrayList<>(publishers.keySet());
+    }
+
+    @Override
+    public Map<String, Collection<StreamObserver<MessageToPublish>>> getActivePublishers() {
+        return ImmutableMap.copyOf(this.publishers);
+    }
+
+    @Override
+    public Map<String, Collection<StreamObserver<TagMessage>>> getActiveSubscribers() {
+        return ImmutableMap.copyOf(this.subscribers);
     }
 
     @Override

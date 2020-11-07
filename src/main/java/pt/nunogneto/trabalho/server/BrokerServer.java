@@ -1,4 +1,4 @@
-package pt.nunogneto.server;
+package pt.nunogneto.trabalho.server;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;

@@ -1,6 +1,6 @@
-package pt.nunogneto.client;
+package pt.nunogneto.trabalho.client;
 
-import pt.nunogneto.util.DataParser;
+import pt.nunogneto.trabalho.util.DataParser;
 
 import java.util.ArrayList;
 import java.util.List;

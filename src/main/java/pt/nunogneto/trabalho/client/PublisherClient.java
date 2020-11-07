@@ -1,15 +1,15 @@
-package pt.nunogneto.client;
+package pt.nunogneto.trabalho.client;
 
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import pt.nunogneto.BrokerGrpc;
-import pt.nunogneto.MessageToPublish;
-import pt.nunogneto.PublishResult;
-import pt.nunogneto.util.DataParser;
-import pt.nunogneto.util.FileDataParser;
-import pt.nunogneto.util.SomeSentencesParser;
+import pt.nunogneto.trabalho.BrokerGrpc;
+import pt.nunogneto.trabalho.MessageToPublish;
+import pt.nunogneto.trabalho.PublishResult;
+import pt.nunogneto.trabalho.util.DataParser;
+import pt.nunogneto.trabalho.util.FileDataParser;
+import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;

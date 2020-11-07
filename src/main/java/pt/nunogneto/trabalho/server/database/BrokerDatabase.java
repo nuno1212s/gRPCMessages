@@ -1,12 +1,12 @@
-package pt.nunogneto.server.database;
+package pt.nunogneto.trabalho.server.database;
 
-import com.google.protobuf.Message;
 import io.grpc.stub.StreamObserver;
-import pt.nunogneto.MessageToPublish;
-import pt.nunogneto.PublishResult;
-import pt.nunogneto.TagMessage;
+import pt.nunogneto.trabalho.MessageToPublish;
+import pt.nunogneto.trabalho.TagMessage;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface BrokerDatabase {
 
@@ -21,6 +21,10 @@ public interface BrokerDatabase {
     void removePublisher(StreamObserver<MessageToPublish> publisher);
 
     void publishMessage(MessageToPublish toPublish);
+
+    Map<String, Collection<StreamObserver<MessageToPublish>>> getActivePublishers();
+
+    Map<String, Collection<StreamObserver<TagMessage>>> getActiveSubscribers();
 
     void shutdown();
 

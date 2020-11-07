@@ -1,9 +1,9 @@
-package pt.nunogneto.server;
+package pt.nunogneto.trabalho.server;
 
 import io.grpc.stub.StreamObserver;
-import pt.nunogneto.*;
-import pt.nunogneto.server.database.BrokerDatabase;
-import pt.nunogneto.server.database.JSONBrokerDatabase;
+import pt.nunogneto.trabalho.*;
+import pt.nunogneto.trabalho.server.database.BrokerDatabase;
+import pt.nunogneto.trabalho.server.database.JSONBrokerDatabase;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
