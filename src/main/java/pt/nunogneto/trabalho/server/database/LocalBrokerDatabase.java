@@ -6,17 +6,45 @@ import pt.nunogneto.trabalho.MessageToPublish;
 import pt.nunogneto.trabalho.TagMessage;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public abstract class LocalBrokerDatabase implements BrokerDatabase {
+
+    protected static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     protected static final Logger logger = Logger.getLogger(BrokerDatabase.class.getName());
 
     protected final Map<String, Collection<StreamObserver<MessageToPublish>>> publishers = new ConcurrentHashMap<>();
 
     protected final Map<String, Collection<StreamObserver<TagMessage>>> subscribers = new ConcurrentHashMap<>();
+
+    public LocalBrokerDatabase() {
+        executor.scheduleAtFixedRate(this::sendKeepAliveToSubscribers, 1000, 1000, TimeUnit.MILLISECONDS);
+    }
+
+    private void sendKeepAliveToSubscribers() {
+        subscribers.forEach((tag, tagSubs)  -> {
+
+            final TagMessage keepAlive = TagMessage.newBuilder().setIsKeepAlive(true).build();
+
+            final Iterator<StreamObserver<TagMessage>> iterator = tagSubs.iterator();
+
+            while (iterator.hasNext()) {
+                final StreamObserver<TagMessage> next = iterator.next();
+
+                try {
+                    next.onNext(keepAlive);
+                } catch (Exception e) {
+                    logger.log(Level.WARNING, "Client for tag {0} has disconnected.", tag);
+
+                    iterator.remove();
+                }
+            }
+
+        });
+    }
 
     @Override
     public List<String> getTagList() {

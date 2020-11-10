@@ -46,6 +46,8 @@ message TagMessage {
 
   uint64 date = 4;
 
+  bool isKeepAlive = 5;
+
 }
 
 message ProviderRegistration {

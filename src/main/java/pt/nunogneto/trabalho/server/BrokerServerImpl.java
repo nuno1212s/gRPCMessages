@@ -17,7 +17,7 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
     private final Logger logger;
 
     public BrokerServerImpl(Logger logger) {
-        this.database = new JSONBrokerDatabase(TimeUnit.HOURS.toMillis(1));
+        this.database = new JSONBrokerDatabase(TimeUnit.SECONDS.toMillis(30));
         this.logger = logger;
 
         logger.log(Level.INFO, "Starting broker server....");
