@@ -13,13 +13,8 @@ service Broker {
 
   rpc subscribeToTag (TagSubscription) returns (stream TagMessage) {}
 
-  rpc subscribeToTags (stream TagSubscription) returns (stream TagMessage) {}
+  rpc publishMessage (stream MessageToPublish) returns (stream KeepAlive) {}
 
-  rpc registerAsProvider (ProviderRegistration) returns (ProviderRegisterResult) {}
-
-  rpc publishMessageIndividual(MessageToPublish) returns (PublishResult) {}
-
-  rpc publishMessage (stream MessageToPublish) returns (stream PublishResult) {}
 }
 
 message TagRequest {}
@@ -50,14 +45,6 @@ message TagMessage {
 
 }
 
-message ProviderRegistration {
-
-  string tagProvider = 1;
-
-}
-
-message ProviderRegisterResult {}
-
 message MessageToPublish {
 
   string tag = 1;
@@ -70,6 +57,5 @@ message MessageToPublish {
 
 }
 
-message PublishResult {
-  uint32 result = 1;
+message KeepAlive {
 }

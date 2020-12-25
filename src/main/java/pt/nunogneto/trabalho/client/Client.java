@@ -8,6 +8,8 @@ import java.util.Random;
 
 public abstract class Client {
 
+    protected static final String TARGET = "localhost:5051";
+
     protected static Random random = new Random();
 
     private static List<String> randomMessages;
@@ -25,6 +27,10 @@ public abstract class Client {
 
     public static List<String> getRandomMessages() {
         return randomMessages;
+    }
+
+    public String getNextMessage() {
+        return getRandomMessages().get(random.nextInt(getRandomMessages().size()));
     }
 
     public String getTag() {

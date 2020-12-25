@@ -5,13 +5,14 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import pt.nunogneto.trabalho.BrokerGrpc;
+import pt.nunogneto.trabalho.KeepAlive;
 import pt.nunogneto.trabalho.MessageToPublish;
-import pt.nunogneto.trabalho.PublishResult;
 import pt.nunogneto.trabalho.util.DataParser;
 import pt.nunogneto.trabalho.util.FileDataParser;
 import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
 import java.util.Random;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -19,9 +20,9 @@ import java.util.logging.Logger;
 
 public class PublisherClient extends Client {
 
-    private static final int TIME_FRAME = 3600;
+    private static int TIME_FRAME = 3600;
 
-    private static final float AVERAGE_MESSAGES_DESIRED = 12;
+    private static float AVERAGE_MESSAGES_DESIRED = 12;
 
     private static final Logger logger = Logger.getLogger(PublisherClient.class.getName());
 
@@ -43,7 +44,7 @@ public class PublisherClient extends Client {
 
     public static int getPoisson(double lambda) {
 
-        double logResult = - (Math.log(1 - Math.random())), divided = logResult / lambda;
+        double logResult = -(Math.log(1 - Math.random())), divided = logResult / lambda;
 
 //        logger.log(Level.INFO, "The log value is {0} and divided is {1}",
 //                new Object[]{logResult, divided});
@@ -51,7 +52,25 @@ public class PublisherClient extends Client {
         return (int) Math.ceil(divided);
     }
 
-    private void generateMessages() {
+    private void publishReceivedMessage(Scanner scanner) {
+
+        System.out.println("Input the tag you want to publish to.");
+        String tag = scanner.nextLine();
+
+        String messageReceived = null;
+
+        do {
+
+            if (messageReceived != null) {
+                publishMessage(tag, messageReceived);
+            }
+
+            messageReceived = scanner.nextLine();
+
+        } while (!messageReceived.equals("q"));
+    }
+
+    private void generateRandomMessages() {
         float averageTimeBetween = (TIME_FRAME / AVERAGE_MESSAGES_DESIRED);
 
 //        logger.log(Level.INFO, "Time between {0}, lambda would be {1}", new Object[]{averageTimeBetween, 1 / averageTimeBetween});
@@ -62,7 +81,7 @@ public class PublisherClient extends Client {
                 break;
             }
 
-            publishMessage(getTag(), getRandomMessages().get(random.nextInt(getRandomMessages().size())));
+            publishMessage(getTag(), getNextMessage());
 
             int toSleep = getPoisson(1 / averageTimeBetween) * 1000;
 
@@ -76,6 +95,24 @@ public class PublisherClient extends Client {
         }
     }
 
+    private void generateMessages() {
+
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.println("Choose the input type:");
+        System.out.println("1) Input from terminal");
+        System.out.println("2) Generate random messages.");
+
+        int i = scanner.nextInt();
+
+        if (i == 1) {
+            publishReceivedMessage(scanner);
+        } else {
+            generateRandomMessages();
+        }
+
+    }
+
     private void deactivate() {
         active.set(false);
 
@@ -86,19 +123,15 @@ public class PublisherClient extends Client {
 
     private StreamObserver<MessageToPublish> initStream() {
 
-        StreamObserver<PublishResult> publishResultHandler = new StreamObserver<PublishResult>() {
+        StreamObserver<KeepAlive> publishResultHandler = new StreamObserver<KeepAlive>() {
             @Override
-            public void onNext(PublishResult value) {
-                if (value.getResult() == 1) {
-                    logger.log(Level.INFO, "Successfully sent the message.");
-                } else {
-                    logger.log(Level.SEVERE, "Received an error while sending message: {0}", value.getResult());
-                }
+            public void onNext(KeepAlive value) {
+                logger.log(Level.SEVERE, "Received keep alive.");
             }
 
             @Override
             public void onError(Throwable t) {
-
+                logger.log(Level.SEVERE, "An error has occurred.");
             }
 
             @Override
@@ -129,7 +162,7 @@ public class PublisherClient extends Client {
 
     public static void main(String[] args) {
 
-        String target = "localhost:50051";
+        String target = Client.TARGET;
 
         DataParser parser = new SomeSentencesParser();
 

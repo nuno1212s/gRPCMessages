@@ -49,11 +49,13 @@ public class SubscriberClient extends Client {
 
             logger.log(Level.INFO, "Received a message for the tag {0}: {1}", new Object[]{tag, next.getMessage()});
         }
+
+        logger.log(Level.INFO, "The server seems to have disconnected!");
     }
 
     public static void main(String[] args) {
 
-        String target = "localhost:50051";
+        String target = Client.TARGET;
 
         DataParser parser = new SomeSentencesParser();
 
@@ -71,6 +73,7 @@ public class SubscriberClient extends Client {
 
         try {
             final SubscriberClient subscriberClient = new SubscriberClient(channel, parser);
+
         } finally {
             try {
                 channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
@@ -78,6 +81,7 @@ public class SubscriberClient extends Client {
                 e.printStackTrace();
             }
         }
+
     }
 
 }

@@ -22,9 +22,9 @@ public class SomeSentencesParser implements DataParser {
                 "The skeleton had skeletons of his own in the closet.");
 
         tags.add("trial");
-//        tags.add("license");
-        //tags.add("support");
-        //tags.add("bug");
+        tags.add("license");
+        tags.add("support");
+        tags.add("bug");
     }
 
     @Override

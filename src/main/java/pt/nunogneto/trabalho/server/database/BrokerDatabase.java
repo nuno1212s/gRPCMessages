@@ -1,6 +1,7 @@
 package pt.nunogneto.trabalho.server.database;
 
 import io.grpc.stub.StreamObserver;
+import pt.nunogneto.trabalho.KeepAlive;
 import pt.nunogneto.trabalho.MessageToPublish;
 import pt.nunogneto.trabalho.TagMessage;
 
@@ -16,13 +17,13 @@ public interface BrokerDatabase {
 
     void registerPublisher(String tag);
 
-    void registerPublisher(String tag, StreamObserver<MessageToPublish> stream);
+    void registerPublisher(String tag, StreamObserver<KeepAlive> stream);
 
-    void removePublisher(StreamObserver<MessageToPublish> publisher);
+    void removePublisher(StreamObserver<KeepAlive> publisher);
 
     void publishMessage(MessageToPublish toPublish);
 
-    Map<String, Collection<StreamObserver<MessageToPublish>>> getActivePublishers();
+    Map<String, Collection<StreamObserver<KeepAlive>>> getActivePublishers();
 
     Map<String, Collection<StreamObserver<TagMessage>>> getActiveSubscribers();
 
