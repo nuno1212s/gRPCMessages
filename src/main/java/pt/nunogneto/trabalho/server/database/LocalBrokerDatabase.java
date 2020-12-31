@@ -132,6 +132,8 @@ public class LocalBrokerDatabase implements BrokerDatabase {
         CompletableFuture.allOf(resultsForClient).whenComplete((void_, exception) -> {
             if (exception != null) {
                 exception.printStackTrace(System.out);
+
+                return;
             }
 
             for (CompletableFuture<AbstractMap.SimpleEntry<StreamObserver<T>, Boolean>> futureResult : resultsForClient) {

@@ -4,6 +4,7 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import org.apache.commons.cli.*;
 import pt.nunogneto.trabalho.BrokerGrpc;
 import pt.nunogneto.trabalho.KeepAlive;
 import pt.nunogneto.trabalho.MessageToPublish;
@@ -11,6 +12,7 @@ import pt.nunogneto.trabalho.util.DataParser;
 import pt.nunogneto.trabalho.util.FileDataParser;
 import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
@@ -34,12 +36,34 @@ public class PublisherClient extends Client {
 
     private StreamObserver<MessageToPublish> publishStream;
 
+    private static List<String> randomMessages;
+
     public PublisherClient(Channel channel, DataParser parser) {
         super(parser);
+
+        randomMessages = parser.readPublisherSentences();
 
         this.futureStub = BrokerGrpc.newStub(channel);
 
         logger.log(Level.INFO, "Starting publisher with tag {0}", getTag());
+    }
+
+    public PublisherClient(Channel channel, DataParser parser, String tag) {
+        super(parser, tag);
+
+        randomMessages = parser.readPublisherSentences();
+
+        this.futureStub = BrokerGrpc.newStub(channel);
+
+        logger.log(Level.INFO, "Starting publisher with tag {0}", getTag());
+    }
+
+    private static List<String> getRandomMessages() {
+        return randomMessages;
+    }
+
+    public String getNextMessage() {
+        return getRandomMessages().get(random.nextInt(getRandomMessages().size()));
     }
 
     public static int getPoisson(double lambda) {
@@ -53,16 +77,14 @@ public class PublisherClient extends Client {
     }
 
     private void publishReceivedMessage(Scanner scanner) {
-
-        System.out.println("Input the tag you want to publish to.");
-        String tag = scanner.nextLine();
+        System.out.println("Type \"q\" to quit from publishing.");
 
         String messageReceived = null;
 
         do {
 
             if (messageReceived != null) {
-                publishMessage(tag, messageReceived);
+                publishMessage(getTag(), messageReceived);
             }
 
             messageReceived = scanner.nextLine();
@@ -95,18 +117,9 @@ public class PublisherClient extends Client {
         }
     }
 
-    private void generateMessages() {
-
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.println("Choose the input type:");
-        System.out.println("1) Input from terminal");
-        System.out.println("2) Generate random messages.");
-
-        int i = scanner.nextInt();
-
-        if (i == 1) {
-            publishReceivedMessage(scanner);
+    private void generateMessages(boolean manual) {
+        if (manual) {
+            publishReceivedMessage(new Scanner(System.in));
         } else {
             generateRandomMessages();
         }
@@ -164,26 +177,83 @@ public class PublisherClient extends Client {
 
         String target = Client.TARGET;
 
-        DataParser parser = new SomeSentencesParser();
+        Options options = new Options();
 
-        if (args.length >= 1) {
-            target = args[0];
+        Option connectionIp = new Option("ip", "target", true,
+                "Choose the IP you want to connect to.");
+        connectionIp.setRequired(false);
+        options.addOption(connectionIp);
+
+        Option publishTag = new Option("t", "tag", true,
+                "Select the tag you want to publish to.");
+        publishTag.setRequired(false);
+        options.addOption(publishTag);
+
+        Option manual = new Option("m", "manual", false,
+                "Should the messages be read from the terminal or be generated automatically.");
+        manual.setRequired(false);
+        options.addOption(manual);
+
+        Option inputFile = new Option("if", "inputfile", true,
+                "Select the input file for random generated messages.");
+        inputFile.setRequired(false);
+        options.addOption(inputFile);
+
+        Option messagesPerHour = new Option("mph", "messagesph", true,
+                "Messages per hour for the random generator");
+        messagesPerHour.setRequired(false);
+        options.addOption(messagesPerHour);
+
+        CommandLineParser cmdLineParser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        try {
+            cmd = cmdLineParser.parse(options, args);
+        } catch (ParseException e) {
+            System.out.println(e.getMessage());
+            formatter.printHelp("Publisher", options);
+
+            System.exit(1);
+            return;
         }
 
-        if (args.length >= 2) {
-            if (args[1].equals("FILE")) {
-                parser = new FileDataParser();
-            }
+        DataParser parser = new SomeSentencesParser();
+
+        boolean isManual = cmd.hasOption("m");
+
+        if (cmd.hasOption("ip")) {
+            target = cmd.getOptionValue("ip");
+        }
+
+        if (cmd.hasOption("if")) {
+            parser = new FileDataParser(cmd.getOptionValue("if"));
+        }
+
+        String tag = null;
+
+        if (cmd.hasOption("t")) {
+            tag = cmd.getOptionValue("t");
+        }
+
+        if (cmd.hasOption("mph")) {
+            AVERAGE_MESSAGES_DESIRED = Float.parseFloat(cmd.getOptionValue("mph"));
         }
 
         final ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
                 .usePlaintext().build();
 
-        final PublisherClient client = new PublisherClient(channel, parser);
+        final PublisherClient client;
+
+        if (tag != null) {
+            client = new PublisherClient(channel, parser, tag);
+        } else {
+            client = new PublisherClient(channel, parser);
+        }
 
         try {
 
-            client.generateMessages();
+            client.generateMessages(isManual);
 
             client.donePublishing();
 

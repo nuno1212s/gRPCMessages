@@ -32,6 +32,7 @@ dependencies {
     implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
 
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
 
     runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
 

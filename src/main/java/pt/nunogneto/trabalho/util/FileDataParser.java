@@ -9,6 +9,10 @@ public class FileDataParser implements DataParser {
     private static final String PUBLISHER_FILE = "publishersentences.txt",
             RANDOM_TAGS = "randomtags.txt";
 
+    public FileDataParser(String fileName) {
+
+    }
+
     private InputStream readResource(String fileName) {
         return FileDataParser.class.getResourceAsStream(fileName);
     }

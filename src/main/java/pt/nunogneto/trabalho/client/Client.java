@@ -12,26 +12,20 @@ public abstract class Client {
 
     protected static Random random = new Random();
 
-    private static List<String> randomMessages;
-
     private final String tag;
 
     public Client(DataParser parser) {
-
-        randomMessages = parser.readPublisherSentences();
 
         final ArrayList<String> tags = parser.readPossibleTags();
 
         this.tag = tags.get(random.nextInt(tags.size()));
     }
 
-    public static List<String> getRandomMessages() {
-        return randomMessages;
+    public Client(DataParser parser, String tag) {
+
+        this.tag = tag;
     }
 
-    public String getNextMessage() {
-        return getRandomMessages().get(random.nextInt(getRandomMessages().size()));
-    }
 
     public String getTag() {
         return tag;

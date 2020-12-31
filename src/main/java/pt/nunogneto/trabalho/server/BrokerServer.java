@@ -9,7 +9,7 @@ import java.util.logging.Logger;
 
 public class BrokerServer {
 
-    private static final int PORT = 50051;
+    private static final int PORT = 5051;
 
     private static final Logger logger = Logger.getLogger(BrokerServer.class.getName());
 
