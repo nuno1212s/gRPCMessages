@@ -1,5 +1,6 @@
 package pt.nunogneto.trabalho.client;
 
+import pt.nunogneto.trabalho.BrokerGrpc;
 import pt.nunogneto.trabalho.util.DataParser;
 
 import java.util.ArrayList;
@@ -14,18 +15,17 @@ public abstract class Client {
 
     private final String tag;
 
-    public Client(DataParser parser) {
 
+
+    public Client(DataParser parser) {
         final ArrayList<String> tags = parser.readPossibleTags();
 
         this.tag = tags.get(random.nextInt(tags.size()));
     }
 
     public Client(DataParser parser, String tag) {
-
         this.tag = tag;
     }
-
 
     public String getTag() {
         return tag;

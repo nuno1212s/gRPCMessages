@@ -4,14 +4,13 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import org.apache.commons.cli.*;
-import pt.nunogneto.trabalho.BrokerGrpc;
-import pt.nunogneto.trabalho.TagMessage;
-import pt.nunogneto.trabalho.TagSubscription;
+import pt.nunogneto.trabalho.*;
 import pt.nunogneto.trabalho.util.DataParser;
-import pt.nunogneto.trabalho.util.FileDataParser;
 import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,22 +19,18 @@ public class SubscriberClient extends Client {
 
     private static final Logger logger = Logger.getLogger(SubscriberClient.class.getName());
 
-    private final BrokerGrpc.BrokerBlockingStub futureStub;
+    private final BrokerGrpc.BrokerBlockingStub blockingStub;
 
     public SubscriberClient(Channel channel, DataParser parser) {
         super(parser);
 
-        this.futureStub = BrokerGrpc.newBlockingStub(channel);
-
-        subscribeToTag(getTag());
+        this.blockingStub = BrokerGrpc.newBlockingStub(channel);
     }
 
     public SubscriberClient(Channel channel, DataParser parser, String tag) {
         super(parser, tag);
 
-        this.futureStub = BrokerGrpc.newBlockingStub(channel);
-
-        subscribeToTag(tag);
+        this.blockingStub = BrokerGrpc.newBlockingStub(channel);
     }
 
     public void subscribeToTag(String tag) {
@@ -44,7 +39,7 @@ public class SubscriberClient extends Client {
 
         TagSubscription subscription = TagSubscription.newBuilder().setTagName(tag).build();
 
-        final Iterator<TagMessage> tagMessageIterator = this.futureStub.subscribeToTag(subscription);
+        final Iterator<TagMessage> tagMessageIterator = this.blockingStub.subscribeToTag(subscription);
 
         while (tagMessageIterator.hasNext()) {
 
@@ -60,6 +55,19 @@ public class SubscriberClient extends Client {
         }
 
         logger.log(Level.INFO, "The server seems to have disconnected!");
+    }
+
+    public List<String> getTags() {
+
+        Iterator<Tag> tagList = this.blockingStub.getTagList(TagRequest.newBuilder().build());
+
+        List<String> tags = new LinkedList<>();
+
+        while (tagList.hasNext()) {
+            tags.add(tagList.next().getTagName());
+        }
+
+        return tags;
     }
 
     public static void main(String[] args) {
@@ -113,6 +121,23 @@ public class SubscriberClient extends Client {
                 subscriberClient = new SubscriberClient(channel, parser);
             } else {
                 subscriberClient = new SubscriberClient(channel, parser, tag);
+            }
+
+            if (cmd.hasOption("l")) {
+                logger.info("The current available tags are:");
+
+                StringBuilder stringBuilder = new StringBuilder();
+
+                for (String subscriberClientTag : subscriberClient.getTags()) {
+                    stringBuilder.append(" - ");
+                    stringBuilder.append(subscriberClientTag);
+                    stringBuilder.append("\n");
+                }
+
+                logger.info(stringBuilder.toString());
+
+            } else {
+                subscriberClient.subscribeToTag(subscriberClient.getTag());
             }
 
         } finally {

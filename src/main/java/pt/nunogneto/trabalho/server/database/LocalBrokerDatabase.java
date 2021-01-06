@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 
 public class LocalBrokerDatabase implements BrokerDatabase {
 
+    private static final List<String> defaultTags = Arrays.asList("trial", "license", "support", "bug");
+
     private static final int DEFAULT_EXECUTORS = 5;
 
     protected static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -28,6 +30,11 @@ public class LocalBrokerDatabase implements BrokerDatabase {
     public LocalBrokerDatabase() {
         //Create a thread that sends keep alives for every client every 1 second. This is to check whether the client
         //Has disconnected from the server, without blocking the main thread that listens to messages
+
+        for (String defaultTag : defaultTags) {
+            publishers.put(defaultTag, new LinkedList<>());
+            subscribers.put(defaultTag, new LinkedList<>());
+        }
 
         //Start the executors
         executor.scheduleAtFixedRate(this::sendKeepAliveToSubscribers, (long) (Math.random() * 1000L), 1000, TimeUnit.MILLISECONDS);
