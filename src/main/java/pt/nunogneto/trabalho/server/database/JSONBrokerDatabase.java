@@ -5,16 +5,16 @@ import com.google.gson.stream.JsonWriter;
 import io.grpc.stub.StreamObserver;
 import pt.nunogneto.trabalho.MessageToPublish;
 import pt.nunogneto.trabalho.TagMessage;
+import pt.nunogneto.trabalho.util.DataParser;
 
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class JSONBrokerDatabase extends LocalBrokerDatabase {
 
@@ -26,12 +26,14 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
 
     private final File file;
 
-    private SortedSet<PublishedMessage> publishedMessages = new TreeSet<>();
-
     private final long expirationTime;
 
-    public JSONBrokerDatabase(long expirationTime) {
+    private final ReentrantLock messagesLock = new ReentrantLock();
 
+    private SortedSet<PublishedMessage> publishedMessages = new TreeSet<>();
+
+    public JSONBrokerDatabase(long expirationTime, DataParser parser) {
+        super(parser);
         this.expirationTime = expirationTime;
 
         this.file = new File(STORAGE_NAME);
@@ -60,12 +62,19 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
 
         reader.beginArray();
 
-        while (reader.hasNext()) {
-            reader.beginObject();
+        try {
+            messagesLock.lock();
 
-            this.publishedMessages.add(readMessage(reader));
+            while (reader.hasNext()) {
+                reader.beginObject();
 
-            reader.endObject();
+                this.publishedMessages.add(readMessage(reader));
+
+                reader.endObject();
+            }
+
+        } finally {
+            messagesLock.unlock();
         }
 
         reader.endArray();
@@ -96,7 +105,6 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
                     reader.skipValue();
                     break;
             }
-
         }
 
         return new PublishedMessage(publishedDate, id, tag, message);
@@ -106,26 +114,46 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
     public void registerSubscriber(String tag, StreamObserver<TagMessage> stream) {
         super.registerSubscriber(tag, stream);
 
-        Iterator<PublishedMessage> iterator = publishedMessages.iterator();
+        List<TagMessage> toSendToUser = new LinkedList<>();
 
-        while (iterator.hasNext()) {
+        try {
+            messagesLock.lock();
 
-            PublishedMessage next = iterator.next();
+            Iterator<PublishedMessage> iterator = publishedMessages.iterator();
 
-            if (next.hasExpired(this.expirationTime)) {
-                //Since this is a sorted set all these message won't be delivered
-                publishedMessages = publishedMessages.headSet(next);
+            while (iterator.hasNext()) {
 
-                asyncSave();
-                break;
+                PublishedMessage next = iterator.next();
+
+                if (next.hasExpired(this.expirationTime)) {
+                    //Since this is a sorted set all these message won't be delivered
+                    publishedMessages = publishedMessages.headSet(next);
+
+                    asyncSave();
+                    break;
+                }
+
+                if (!next.getTag().equalsIgnoreCase(tag)) {
+                    continue;
+                }
+
+                toSendToUser.add(TagMessage.newBuilder().setMessage(next.getMessage())
+                        .setDate(next.getPublishedDate())
+                        .setOriginatingTag(next.getTag())
+                        .setTagID(next.getMessageID())
+                        .setIsKeepAlive(false).build());
             }
-
-            if (!next.getTag().equalsIgnoreCase(tag)) {
-                continue;
-            }
-
-            stream.onNext(TagMessage.newBuilder().setMessage(next.getMessage()).build());
+        } finally {
+            messagesLock.unlock();
         }
+
+        publishMessageListToClient(stream, toSendToUser, tag).whenComplete((result, excep) -> {
+
+            if (!result) {
+
+            }
+
+        });
     }
 
     @Override
@@ -135,7 +163,14 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
         PublishedMessage publishedMessage = new PublishedMessage(toPublish.getDate(), toPublish.getId(),
                 toPublish.getTag(), toPublish.getMessage());
 
-        publishedMessages.add(publishedMessage);
+        try {
+            messagesLock.lock();
+
+            publishedMessages.add(publishedMessage);
+
+        } finally {
+            messagesLock.unlock();
+        }
 
         asyncSave();
     }
@@ -155,8 +190,15 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
 
             writer.beginArray();
 
-            for (PublishedMessage publishedMessage : publishedMessages) {
-                publishedMessage.writeTo(writer);
+            try {
+                messagesLock.lock();
+
+                for (PublishedMessage publishedMessage : publishedMessages) {
+                    publishedMessage.writeTo(writer);
+                }
+
+            } finally {
+                messagesLock.unlock();
             }
 
             writer.endArray();
@@ -181,6 +223,10 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
             this.messageID = messageID;
             this.tag = tag;
             this.message = message;
+        }
+
+        public long getMessageID() {
+            return messageID;
         }
 
         public long getPublishedDate() {

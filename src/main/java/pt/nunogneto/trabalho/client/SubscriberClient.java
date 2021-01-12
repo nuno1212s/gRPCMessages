@@ -8,6 +8,8 @@ import pt.nunogneto.trabalho.*;
 import pt.nunogneto.trabalho.util.DataParser;
 import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,6 +20,8 @@ import java.util.logging.Logger;
 public class SubscriberClient extends Client {
 
     private static final Logger logger = Logger.getLogger(SubscriberClient.class.getName());
+
+    private static final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy.MM.dd G 'at' HH:mm:ss");
 
     private final BrokerGrpc.BrokerBlockingStub blockingStub;
 
@@ -46,12 +50,13 @@ public class SubscriberClient extends Client {
             final TagMessage next = tagMessageIterator.next();
 
             if (next.getIsKeepAlive()) {
-                logger.log(Level.INFO, "Received keepalive message.");
+                //logger.log(Level.INFO, "Received keepalive message.");
 
                 continue;
             }
 
-            logger.log(Level.INFO, "Received a message for the tag {0}: {1}", new Object[]{tag, next.getMessage()});
+            logger.log(Level.INFO, "Received a message for the tag {0}, sent on {2}: {1}", new Object[]{tag, next.getMessage(),
+                    simpleDateFormat.format(new Date(next.getDate()))});
         }
 
         logger.log(Level.INFO, "The server seems to have disconnected!");
@@ -114,8 +119,9 @@ public class SubscriberClient extends Client {
 
         final ManagedChannel channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
 
+        final SubscriberClient subscriberClient;
+
         try {
-            final SubscriberClient subscriberClient;
 
             if (tag == null) {
                 subscriberClient = new SubscriberClient(channel, parser);
@@ -147,7 +153,6 @@ public class SubscriberClient extends Client {
                 e.printStackTrace();
             }
         }
-
     }
 
 }

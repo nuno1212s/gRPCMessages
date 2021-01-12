@@ -101,11 +101,15 @@ public class PublisherClient extends Client {
                 break;
             }
 
-            publishMessage(getTag(), getNextMessage());
+            String nextMessage = getNextMessage();
+
+            publishMessage(getTag(), nextMessage);
+
+            logger.log(Level.INFO, "Publishing message {0}", nextMessage);
 
             int toSleep = getPoisson(1 / averageTimeBetween) * 1000;
 
-            logger.log(Level.INFO, "Sleeping for {0} ms", toSleep);
+            //logger.log(Level.INFO, "Sleeping for {0} ms", toSleep);
 
             try {
                 Thread.sleep(toSleep);
@@ -137,7 +141,7 @@ public class PublisherClient extends Client {
         StreamObserver<KeepAlive> publishResultHandler = new StreamObserver<KeepAlive>() {
             @Override
             public void onNext(KeepAlive value) {
-                logger.log(Level.SEVERE, "Received keep alive.");
+                //logger.log(Level.SEVERE, "Received keep alive.");
             }
 
             @Override
@@ -148,6 +152,8 @@ public class PublisherClient extends Client {
             @Override
             public void onCompleted() {
                 logger.log(Level.SEVERE, "The broker server has been disconnected.");
+
+                System.exit(1);
             }
         };
 

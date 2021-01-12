@@ -4,6 +4,7 @@ import io.grpc.stub.StreamObserver;
 import pt.nunogneto.trabalho.*;
 import pt.nunogneto.trabalho.server.database.BrokerDatabase;
 import pt.nunogneto.trabalho.server.database.JSONBrokerDatabase;
+import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -17,7 +18,7 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
     private final Logger logger;
 
     public BrokerServerImpl(Logger logger, long messageExpirationTime) {
-        this.database = new JSONBrokerDatabase(messageExpirationTime);
+        this.database = new JSONBrokerDatabase(messageExpirationTime, new SomeSentencesParser());
         this.logger = logger;
 
         logger.log(Level.INFO, "Starting broker server....");
@@ -67,14 +68,22 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
                     database.registerPublisher(tag, responseObserver);
                 }
 
-                database.publishMessage(value);
+                //perform a copy because I was getting a weird error with unallocated messages???
+                //Maybe creating a new one will fix it.
+                MessageToPublish messageCopy = MessageToPublish.newBuilder()
+                        .setMessage(value.getMessage())
+                        .setTag(value.getTag())
+                        .setId(value.getId())
+                        .setDate(value.getDate()).build();
+
+                database.publishMessage(messageCopy);
 
                 logger.log(Level.INFO, "Received a message to publish in the tag: {0}. Message: {1}", new Object[]{tag, message});
             }
 
             @Override
             public void onError(Throwable t) {
-                logger.log(Level.WARNING, "Publisher client has disconnected. {0}", t.getMessage());
+                logger.log(Level.WARNING, "Publisher client has disconnected.");
 
                 database.removePublisher(responseObserver);
             }
@@ -85,6 +94,8 @@ public class BrokerServerImpl extends BrokerGrpc.BrokerImplBase {
                 logger.log(Level.INFO, "Publisher disconnected.");
 
                 try {
+                    database.removePublisher(responseObserver);
+
                     responseObserver.onCompleted();
                 } catch (Exception ignored) {
 

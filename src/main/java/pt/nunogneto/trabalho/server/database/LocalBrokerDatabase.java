@@ -5,6 +5,7 @@ import io.grpc.stub.StreamObserver;
 import pt.nunogneto.trabalho.KeepAlive;
 import pt.nunogneto.trabalho.MessageToPublish;
 import pt.nunogneto.trabalho.TagMessage;
+import pt.nunogneto.trabalho.util.DataParser;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -12,8 +13,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class LocalBrokerDatabase implements BrokerDatabase {
-
-    private static final List<String> defaultTags = Arrays.asList("trial", "license", "support", "bug");
 
     private static final int DEFAULT_EXECUTORS = 5;
 
@@ -27,13 +26,13 @@ public class LocalBrokerDatabase implements BrokerDatabase {
 
     protected final Map<String, Collection<StreamObserver<TagMessage>>> subscribers = new ConcurrentHashMap<>();
 
-    public LocalBrokerDatabase() {
+    public LocalBrokerDatabase(DataParser parser) {
         //Create a thread that sends keep alives for every client every 1 second. This is to check whether the client
         //Has disconnected from the server, without blocking the main thread that listens to messages
 
-        for (String defaultTag : defaultTags) {
-            publishers.put(defaultTag, new LinkedList<>());
-            subscribers.put(defaultTag, new LinkedList<>());
+        for (String defaultTag : parser.readPossibleTags()) {
+            publishers.put(defaultTag, Collections.synchronizedList(new LinkedList<>()));
+            subscribers.put(defaultTag, Collections.synchronizedList(new LinkedList<>()));
         }
 
         //Start the executors
@@ -77,7 +76,8 @@ public class LocalBrokerDatabase implements BrokerDatabase {
     @Override
     public void registerSubscriber(String tag, StreamObserver<TagMessage> stream) {
 
-        Collection<StreamObserver<TagMessage>> orDefault = subscribers.getOrDefault(tag, new LinkedList<>());
+        Collection<StreamObserver<TagMessage>> orDefault = subscribers.getOrDefault(tag,
+                Collections.synchronizedList(new LinkedList<>()));
 
         orDefault.add(stream);
 
@@ -86,13 +86,14 @@ public class LocalBrokerDatabase implements BrokerDatabase {
 
     @Override
     public void registerPublisher(String tag) {
-        this.publishers.put(tag, new LinkedList<>());
+        this.publishers.put(tag, Collections.synchronizedList(new LinkedList<>()));
     }
 
     @Override
     public void registerPublisher(String tag, StreamObserver<KeepAlive> stream) {
 
-        Collection<StreamObserver<KeepAlive>> publishers = this.publishers.getOrDefault(tag, new LinkedList<>());
+        Collection<StreamObserver<KeepAlive>> publishers = this.publishers.getOrDefault(tag,
+                Collections.synchronizedList(new LinkedList<>()));
 
         publishers.add(stream);
 
@@ -104,20 +105,14 @@ public class LocalBrokerDatabase implements BrokerDatabase {
     public void removePublisher(StreamObserver<KeepAlive> publisher) {
         for (Map.Entry<String, Collection<StreamObserver<KeepAlive>>> tag
                 : publishers.entrySet()) {
-
-            if (tag.getValue().remove(publisher)) {
-                if (tag.getValue().isEmpty()) {
-                    publishers.remove(tag.getKey());
-                }
-
-                break;
-            }
+            tag.getValue().removeIf(next -> next.equals(publisher));
         }
     }
 
     @Override
     public void publishMessage(MessageToPublish toPublish) {
-        Collection<StreamObserver<TagMessage>> streamObservers = subscribers.get(toPublish.getTag());
+        Collection<StreamObserver<TagMessage>> streamObservers
+                = subscribers.get(toPublish.getTag());
 
         if (streamObservers == null) return;
 
@@ -129,7 +124,7 @@ public class LocalBrokerDatabase implements BrokerDatabase {
         publishAndHandleDisconnectedClients(streamObservers, build, toPublish.getTag());
     }
 
-    private <T> void publishAndHandleDisconnectedClients(
+    protected <T> void publishAndHandleDisconnectedClients(
             Collection<StreamObserver<T>> streamObservers,
             T toPublish, String tag) {
 
@@ -165,7 +160,8 @@ public class LocalBrokerDatabase implements BrokerDatabase {
      * @param <T>
      * @return
      */
-    private <T> CompletableFuture<AbstractMap.SimpleEntry<StreamObserver<T>, Boolean>>[] publishMessageInList(
+    @SuppressWarnings("unchecked")
+    protected <T> CompletableFuture<AbstractMap.SimpleEntry<StreamObserver<T>, Boolean>>[] publishMessageInList(
             Collection<StreamObserver<T>> streamObservers,
             T toPublish, String tag) {
 
@@ -179,7 +175,7 @@ public class LocalBrokerDatabase implements BrokerDatabase {
 
             CompletableFuture<AbstractMap.SimpleEntry<StreamObserver<T>, Boolean>> publishTask =
                     CompletableFuture.supplyAsync(() ->
-                            new AbstractMap.SimpleEntry<>(next, sendMessageToClient(next, toPublish, tag)),
+                                    new AbstractMap.SimpleEntry<>(next, sendMessageToClient(next, toPublish, tag)),
                             executors);
 
             futures[i] = publishTask;
@@ -189,21 +185,56 @@ public class LocalBrokerDatabase implements BrokerDatabase {
     }
 
     /**
-     * Attempt to send a message to a client.
+     * Send a list of messages, in order to a client
      *
-     * Returns whether the message was sent successfully or not
-     *
-     * @param stream The client to send to
-     * @param toPublish The message to send
-     * @param tag The tag of the message
+     * @param streamObserver
+     * @param toPublish
+     * @param tag
+     * @param <T>
      * @return
      */
-    private <T> boolean sendMessageToClient(StreamObserver<T> stream, T toPublish, String tag) {
+    protected <T> CompletableFuture<Boolean> publishMessageListToClient(
+            StreamObserver<T> streamObserver,
+            Collection<T> toPublish,
+            String tag) {
+
+        return CompletableFuture.supplyAsync(() -> {
+
+            boolean completed = true;
+
+            for (T publish : toPublish) {
+                if (!sendMessageToClient(streamObserver, publish, tag)) {
+                    completed = false;
+                    break;
+                }
+            }
+
+            return completed;
+
+        }, executors);
+    }
+
+    /**
+     * Attempt to send a message to a client.
+     * <p>
+     * Returns whether the message was sent successfully or not
+     *
+     * @param stream    The client to send to
+     * @param toPublish The message to send
+     * @param tag       The tag of the message
+     * @return
+     */
+    private <T> boolean sendMessageToClient(final StreamObserver<T> stream, T toPublish, String tag) {
 
         try {
-            stream.onNext(toPublish);
+
+            synchronized (stream) {
+                stream.onNext(toPublish);
+            }
+
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Client for tag {0} has disconnected", tag);
+            logger.log(Level.WARNING, "Client for tag {0} has disconnected while publishing " + tag + " " + stream, tag);
+            e.printStackTrace();
 
             return false;
         }
@@ -220,8 +251,10 @@ public class LocalBrokerDatabase implements BrokerDatabase {
             logger.log(Level.WARNING, "Disconnecting publishers for tag {0}", tag);
 
             try {
-                for (StreamObserver<KeepAlive> publisherStream : publisherStreams) {
-                    publisherStream.onCompleted();
+                for (final StreamObserver<KeepAlive> publisherStream : publisherStreams) {
+                    synchronized (publisherStream) {
+                        publisherStream.onCompleted();
+                    }
                 }
             } catch (Exception ignored) {
 
@@ -235,7 +268,10 @@ public class LocalBrokerDatabase implements BrokerDatabase {
                 logger.log(Level.WARNING, "Disconnecting subscribers for tag {0}", tag);
 
                 for (StreamObserver<TagMessage> subscriberStream : subscriberStreams) {
-                    subscriberStream.onCompleted();
+                    synchronized (subscriberStream) {
+                        subscriberStream.onCompleted();
+                    }
+
                 }
             } catch (Exception ignored) {
 

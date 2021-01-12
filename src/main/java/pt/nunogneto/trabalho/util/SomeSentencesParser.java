@@ -21,6 +21,17 @@ public class SomeSentencesParser implements DataParser {
         publisherSentences.add(
                 "The skeleton had skeletons of his own in the closet.");
 
+        publisherSentences.add(
+                "The tart lemonade quenched her thirst, but not her longing.");
+
+        publisherSentences.add(
+                "The two walked down the slot canyon oblivious to the sound of thunder in the distance."
+        );
+
+        publisherSentences.add(
+                "With a single flip of the coin, his life changed forever."
+        );
+
         tags.add("trial");
         tags.add("license");
         tags.add("support");
