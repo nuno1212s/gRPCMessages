@@ -13,14 +13,16 @@ public abstract class Client {
 
     protected static Random random = new Random();
 
-    private final String tag;
-
-
+    private String tag;
 
     public Client(DataParser parser) {
         final ArrayList<String> tags = parser.readPossibleTags();
 
         this.tag = tags.get(random.nextInt(tags.size()));
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
     }
 
     public Client(DataParser parser, String tag) {

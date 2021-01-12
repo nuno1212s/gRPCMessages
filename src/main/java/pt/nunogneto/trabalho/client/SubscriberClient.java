@@ -9,10 +9,7 @@ import pt.nunogneto.trabalho.util.DataParser;
 import pt.nunogneto.trabalho.util.SomeSentencesParser;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -75,6 +72,19 @@ public class SubscriberClient extends Client {
         return tags;
     }
 
+    private static int readIndex(Scanner scanner, int limit) {
+
+        int index = scanner.nextInt();
+
+        if (index < 0 || index > limit) {
+            System.out.println("Choose a number between 0 and " + limit);
+
+            return readIndex(scanner, limit);
+        }
+
+        return index;
+    }
+
     public static void main(String[] args) {
 
         String target = Client.TARGET;
@@ -92,6 +102,11 @@ public class SubscriberClient extends Client {
                 "Select the tag you want to subscribe to.");
         publishTag.setRequired(false);
         options.addOption(publishTag);
+
+        Option listTags = new Option("l", "listtags", false, "List the tags that are available and ask the user for which tag to subscribe to.");
+
+        listTags.setRequired(false);
+        options.addOption(listTags);
 
         CommandLineParser cmdLineParser = new DefaultParser();
         HelpFormatter formatter = new HelpFormatter();
@@ -134,13 +149,24 @@ public class SubscriberClient extends Client {
 
                 StringBuilder stringBuilder = new StringBuilder();
 
-                for (String subscriberClientTag : subscriberClient.getTags()) {
+                List<String> tags = subscriberClient.getTags();
+
+                int index = 0;
+
+                for (String subscriberClientTag : tags) {
+                    stringBuilder.append(index++);
                     stringBuilder.append(" - ");
                     stringBuilder.append(subscriberClientTag);
                     stringBuilder.append("\n");
                 }
 
                 logger.info(stringBuilder.toString());
+
+                int i = readIndex(new Scanner(System.in), index);
+
+                subscriberClient.setTag(tags.get(i));
+
+                subscriberClient.subscribeToTag(subscriberClient.getTag());
 
             } else {
                 subscriberClient.subscribeToTag(subscriberClient.getTag());

@@ -126,7 +126,7 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
                 PublishedMessage next = iterator.next();
 
                 if (next.hasExpired(this.expirationTime)) {
-                    //Since this is a sorted set all these message won't be delivered
+                    //Since this is a sorted set all the messages from here on out won't be delivered, as they've expired
                     publishedMessages = publishedMessages.headSet(next);
 
                     asyncSave();
@@ -147,10 +147,13 @@ public class JSONBrokerDatabase extends LocalBrokerDatabase {
             messagesLock.unlock();
         }
 
+        //The messages are ordered newest first, but we want the user to receive the oldest messages first
+        Collections.reverse(toSendToUser);
+
         publishMessageListToClient(stream, toSendToUser, tag).whenComplete((result, excep) -> {
 
             if (!result) {
-
+                removeSubscriber(tag, stream);
             }
 
         });

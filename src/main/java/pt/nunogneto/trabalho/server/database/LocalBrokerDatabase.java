@@ -109,6 +109,10 @@ public class LocalBrokerDatabase implements BrokerDatabase {
         }
     }
 
+    protected void removeSubscriber(String tag, StreamObserver<TagMessage> client) {
+        this.subscribers.get(tag).remove(client);
+    }
+
     @Override
     public void publishMessage(MessageToPublish toPublish) {
         Collection<StreamObserver<TagMessage>> streamObservers
@@ -234,7 +238,7 @@ public class LocalBrokerDatabase implements BrokerDatabase {
 
         } catch (Exception e) {
             logger.log(Level.WARNING, "Client for tag {0} has disconnected while publishing " + tag + " " + stream, tag);
-            e.printStackTrace();
+            //e.printStackTrace();
 
             return false;
         }
